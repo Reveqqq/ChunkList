@@ -17,24 +17,26 @@ namespace fefu_laboratory_two {
         using const_reference = const T&;
 
 
-        Allocator() noexcept {};
+        constexpr Allocator() noexcept {};
 
-        Allocator(const Allocator& other) noexcept = default;
+        constexpr Allocator(const Allocator& other) noexcept = default;
 
         template <class U>
-        Allocator(const Allocator<U>& other) noexcept {};
+        constexpr Allocator(const Allocator<U>& other) noexcept {};
 
         ~Allocator() = default;
 
         pointer allocate(size_type _Count) {
-            static_assert(sizeof(T) > 0, "value_type must be complete before calling allocate.");
-            return static_cast<T*>(_Allocate<_New_alignof<T>>(_Get_size_of_n<sizeof(T)>(_Count)));
+            auto ptr = static_cast<pointer>(malloc(sizeof(value_type) * _Count));
+            if (ptr)
+                return ptr;
+
+            throw std::bad_alloc();
         };
    
-        void deallocate(pointer p, size_type n, const size_t _Count) noexcept {
-            _STL_ASSERT(p != nullptr || _Count == 0, "null pointer cannot point to a block of non-zero size");
-            // no overflow check on the following multiply; we assume _Allocate did that check
-            _Deallocate<_New_alignof<T>>(p, sizeof(T) * _Count);
+        void deallocate(pointer p, const size_t _Count) noexcept {
+            (void)_Count;
+            free(p);
         };
     };
 
@@ -509,37 +511,37 @@ namespace fefu_laboratory_two {
 
         /// @brief Checks if the contents of lhs and rhs are equal
         /// @param lhs,rhs ChunkLists whose contents to compare
-        template <class U, class Alloc>
-        friend bool operator==(const ChunkList<U, Alloc>& lhs,
-            const ChunkList<U, Alloc>& rhs);
+        template <class U, int N, class Alloc>
+        friend bool operator==(const ChunkList<U, N, Alloc>& lhs,
+            const ChunkList<U, N, Alloc>& rhs);
 
         /// @brief Checks if the contents of lhs and rhs are not equal
         /// @param lhs,rhs ChunkLists whose contents to compare
-        template <class U, class Alloc>
-        friend bool operator!=(const ChunkList<U, Alloc>& lhs,
-            const ChunkList<U, Alloc>& rhs);
+        template <class U, int N, class Alloc>
+        friend bool operator!=(const ChunkList<U, N, Alloc>& lhs,
+            const ChunkList<U, N, Alloc>& rhs);
 
         /// @brief Compares the contents of lhs and rhs lexicographically.
         /// @param lhs,rhs ChunkLists whose contents to compare
-        template <class U, class Alloc>
-        friend bool operator>(const ChunkList<U, Alloc>& lhs, const ChunkList<U, Alloc>& rhs);
+        template <class U, int N, class Alloc>
+        friend bool operator>(const ChunkList<U, N, Alloc>& lhs, const ChunkList<U, N, Alloc>& rhs);
 
         /// @brief Compares the contents of lhs and rhs lexicographically.
         /// @param lhs,rhs ChunkLists whose contents to compare
-        template <class U, class Alloc>
-        friend bool operator<(const ChunkList<U, Alloc>& lhs, const ChunkList<U, Alloc>& rhs);
+        template <class U, int N, class Alloc>
+        friend bool operator<(const ChunkList<U, N, Alloc>& lhs, const ChunkList<U, N, Alloc>& rhs);
 
         /// @brief Compares the contents of lhs and rhs lexicographically.
         /// @param lhs,rhs ChunkLists whose contents to compare
-        template <class U, class Alloc>
-        friend bool operator>=(const ChunkList<U, Alloc>& lhs,
-            const ChunkList<U, Alloc>& rhs);
+        template <class U, int N, class Alloc>
+        friend bool operator>=(const ChunkList<U, N, Alloc>& lhs,
+            const ChunkList<U, N, Alloc>& rhs);
 
         /// @brief Compares the contents of lhs and rhs lexicographically.
         /// @param lhs,rhs ChunkLists whose contents to compare
-        template <class U, class Alloc>
-        friend bool operator<=(const ChunkList<U, Alloc>& lhs,
-            const ChunkList<U, Alloc>& rhs);
+        template <class U, int N, class Alloc>
+        friend bool operator<=(const ChunkList<U, N, Alloc>& lhs,
+            const ChunkList<U, N, Alloc>& rhs);
 
         // operator <=> will be handy
     };
@@ -548,21 +550,21 @@ namespace fefu_laboratory_two {
 
     /// @brief  Swaps the contents of lhs and rhs.
     /// @param lhs,rhs containers whose contents to swap
-    template <class T, class Alloc>
-    void swap(ChunkList<T, 0, Alloc>& lhs, ChunkList<T, Alloc>& rhs);
+    template <class T , int N, class Alloc>
+    void swap(ChunkList<T, N, Alloc>& lhs, ChunkList<T, N, Alloc>& rhs);
 
     /// @brief Erases all elements that compare equal to value from the container.
     /// @param c container from which to erase
     /// @param value value to be removed
     /// @return The number of erased elements.
-    template <class T, class Alloc, class U>
-    typename ChunkList<T, Alloc>::size_type erase(ChunkList<T, Alloc>& c, const U& value);
+    template <class T, int N, class Alloc, class U>
+    typename ChunkList<T, N, Alloc>::size_type erase(ChunkList<T, N, Alloc>& c, const U& value);
 
     /// @brief Erases all elements that compare equal to value from the container.
     /// @param c container from which to erase
     /// @param pred unary predicate which returns ​true if the element should be
     /// erased.
     /// @return The number of erased elements.
-    template <class T, class Alloc, class Pred>
-    typename ChunkList<T, Alloc>::size_type erase_if(ChunkList<T, Alloc>& c, Pred pred);
+    template <class T, int N, class Alloc, class Pred>
+    typename ChunkList<T, N, Alloc>::size_type erase_if(ChunkList<T, N, Alloc>& c, Pred pred);
 }  // namespace fefu_laboratory_two
