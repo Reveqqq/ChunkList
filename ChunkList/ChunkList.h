@@ -40,21 +40,34 @@ namespace fefu_laboratory_two {
 		};
 	};
 
-	template <typename T>
-	struct Position {
-		T* p;
-		Position(T* p) : p(p) {}
+	//template <typename T>
+	//struct Position {
+	//	T* p;
+	//	Position(T* p) : p(p) {}
 
-		int& dereference() const { return *p; }; // Получение текущего элемента.
-		bool equal(const Position& other) const { return p == other.p; }; // Проверка на равенство.
-		void increment() { ++p; }; // Перемещение вперед.
-		void decrement() { --p; };// Перемещение назад.
-		void advance(std::ptrdiff_t n) { p += n; };  // Перемещение на "n" элементов.
-		std::ptrdiff_t distance_to(const Position& other) const { return other.p - p; }; // Расстояние до другой позиции.
+	//	int& dereference() const { return *p; }; // Получение текущего элемента.
+	//	bool equal(const Position& other) const { return p == other.p; }; // Проверка на равенство.
+	//	void increment() { ++p; }; // Перемещение вперед.
+	//	void decrement() { --p; };// Перемещение назад.
+	//	void advance(std::ptrdiff_t n) { p += n; };  // Перемещение на "n" элементов.
+	//	std::ptrdiff_t distance_to(const Position& other) const { return other.p - p; }; // Расстояние до другой позиции.
+	//};
+
+	template <typename ValueType>
+	class IChunk {
+	public:
+
+		virtual int GetSize() = 0;
+		virtual ValueType& at(size_t pos) = 0;
 	};
+
 
 	template <typename ValueType>
 	class ChunkList_iterator {
+	private:
+		IChunk<ValueType>* list = nullptr; //
+		ValueType* current_value; //указатель на текущий элемент из чанка
+		int k = 0; //счетчик чтобы быть в пределах чанк k = 0, ... , N - 1
 	public:
 		using iterator_category = std::random_access_iterator_tag;
 		using value_type = ValueType;
@@ -64,7 +77,11 @@ namespace fefu_laboratory_two {
 
 		constexpr ChunkList_iterator() noexcept = default;
 
-		ChunkList_iterator(Position<ValueType> pos) : pos(pos) {}
+		ChunkList_iterator(IChunk<ValueType>* chunk, int index, ValueType* value) :
+			list(chunk),
+			k(index),
+			current_value(value)
+		{};
 
 		ChunkList_iterator(const ChunkList_iterator& other) noexcept = default;
 
@@ -73,42 +90,58 @@ namespace fefu_laboratory_two {
 		~ChunkList_iterator() = default;
 
 		friend void swap(ChunkList_iterator<ValueType>& a, ChunkList_iterator<ValueType>& b) {
-			std::swap(a.pos, b.pos); 
+			std::swap(a.current_chunk, b.current_chunk); //why friend method can't access private field?
 		};
 
 		friend bool operator==(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return lhs.pos.equal(rhs.pos);
+			return lhs.current_chunk == rhs.current_chunk;
 		};
 		friend bool operator!=(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return !(lhs == rhs);
+			return !(lhs.current_chunk == rhs.current_chunk);
 		};
 
-		reference operator*() const { return pos.dereference(); };
-		pointer operator->() const { return pos.p; };
+		reference operator*() const { return *current_value; };
+		pointer operator->() const { return current_value; };
 
-		ChunkList_iterator& operator++() { pos.increment(); return *this; };
-		ChunkList_iterator operator++(int) { auto old = *this; ++(*this); return old; };
+		ChunkList_iterator& operator++() {
+			k++;
+			current_value = &list->at(k);
+			return (this);
+		};
 
-		ChunkList_iterator& operator--() { pos.decrement(); return *this; };
-		ChunkList_iterator operator--(int) { auto old = *this; --(*this); return old; };
+		/*ChunkList_iterator operator++(int) {
+		};
+		ChunkList_iterator operator--(int) {
+		};
+		*/
+
+		ChunkList_iterator& operator--() {
+			k--;
+			current_value = &list->at(k);
+			return (this);
+		};
 
 		ChunkList_iterator operator+(const difference_type& n) const {
-			(*this) += n;
-			return (*this);
+			k += n;
+			current_value = &list->at(k);
+			return (this);
 		};
-		ChunkList_iterator& operator+=(const difference_type& n) { pos.advance(n); return *this; };
+
 
 		ChunkList_iterator operator-(const difference_type& n) const {
-			pos.p -= n;
-			return pos.p;
+			k -= n;
+			current_value = &list->at(k);
+			return (this);
 		};
-		ChunkList_iterator& operator-=(const difference_type& n) { return *this += -n; };
 
-		difference_type operator-(const ChunkList_iterator<ValueType>& rhs) {
-			return rhs.pos.distance_to((*this).pos);
-		};
+		ChunkList_iterator& operator+=(const difference_type& n) { };
+
+		ChunkList_iterator& operator-=(const difference_type& n) { };
+
+		/*difference_type operator-(const ChunkList_iterator<ValueType>& rhs) {
+		};*/
 
 		reference operator[](const difference_type& n) { auto tmp = *this; tmp += n; return *tmp; };
 
@@ -129,8 +162,6 @@ namespace fefu_laboratory_two {
 			return !(lhs < rhs);
 		};
 		// operator<=> will be handy
-	private:
-		Position<ValueType> pos;
 	};
 
 	template <typename ValueType>
@@ -191,8 +222,23 @@ namespace fefu_laboratory_two {
 	};
 
 	template <typename T, int N, typename Allocator = Allocator<T>>
-	class ChunkList {
+	class ChunkList : public IChunk<T> {
+		class Chunk {
+		public:
+			T* list = nullptr; //list с элементами
+			Chunk* prev = nullptr;
+			Chunk* next = nullptr;
+			int chunk_size = 0;	//кол-во занятых мест в чанке
+			Allocator allocator;
+			Chunk() {
+				list = allocator.allocate(N);
+			}
+		};
+	private:
+		Chunk* first_chunk = nullptr;
+		int list_size = 0;
 	public:
+
 		using value_type = T;
 		using allocator_type = Allocator;
 		using size_type = std::size_t;
@@ -204,13 +250,16 @@ namespace fefu_laboratory_two {
 		using iterator = ChunkList_iterator<value_type>;
 		using const_iterator = ChunkList_const_iterator<value_type>;
 
+		int GetChunkSize() override { return N; } //return capacity of Chunk - N
+
 		/// @brief Default constructor. Constructs an empty container with a
 		/// default-constructed allocator.
-		ChunkList();
+		ChunkList() : first_chunk(new Chunk()) {};
 
 		/// @brief Constructs an empty container with the given allocator
 		/// @param alloc allocator to use for all memory allocations of this container
-		explicit ChunkList(const Allocator& alloc);
+		/// s
+		/*explicit ChunkList(const Allocator& alloc);*/
 
 		/// @brief Constructs the container with count copies of elements with value
 		/// and with the given allocator
@@ -334,7 +383,16 @@ namespace fefu_laboratory_two {
 		/// @param pos position of the element to return
 		/// @return Reference to the requested element.
 		/// @throw std::out_of_range
-		reference at(size_type pos);
+		reference at(size_type pos) override { //at кидает exception если за пределами в отличии от []
+			int chunk_index = pos / N;
+			int elemnt_index = pos % N;
+			Chunk* tmp = first_chunk;
+			while (chunk_index > 0) {
+				tmp = tmp->next;
+				chunk_index--;
+			}
+			return tmp->list[elemnt_index];
+		};
 
 		/// @brief Returns a const reference to the element at specified location pos,
 		/// with bounds checking. If pos is not within the range of the container, an
@@ -481,7 +539,13 @@ namespace fefu_laboratory_two {
 		/// @brief Removes the element at pos.
 		/// @param pos iterator to the element to remove
 		/// @return Iterator following the last removed element.
-		iterator erase(const_iterator pos);
+		iterator erase(const_iterator pos) { //сдвигаем все элементы влево удаляя текущий
+			auto tmp = pos.k;
+			for (int i = tmp + 1; i < list_size; i++) {
+				at(i - 1) = at(i);
+			}
+			list_size--;
+		};
 
 		/// @brief Removes the elements in the range [first, last).
 		/// @param first,last range of elements to remove
@@ -491,7 +555,19 @@ namespace fefu_laboratory_two {
 		/// @brief Appends the given element value to the end of the container.
 		/// The new element is initialized as a copy of value.
 		/// @param value the value of the element to append
-		void push_back(const T& value);
+		void push_back(const T& value) {
+			Chunk* tmp = first_chunk;
+			while (tmp->next != nullptr)
+				tmp = tmp->next;
+			if (tmp->chunk_size == N)
+			{
+				tmp->next = new Chunk();
+				tmp = tmp->next;
+			}
+			tmp->list[tmp->chunk_size] = value;
+			tmp->chunk_size++;
+			list_size++;
+		};
 
 		/// @brief Appends the given element value to the end of the container.
 		/// Value is moved into the new element.
