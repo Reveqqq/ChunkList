@@ -40,34 +40,21 @@ namespace fefu_laboratory_two {
 		};
 	};
 
-	//template <typename T>
-	//struct Position {
-	//	T* p;
-	//	Position(T* p) : p(p) {}
-
-	//	int& dereference() const { return *p; }; // Получение текущего элемента.
-	//	bool equal(const Position& other) const { return p == other.p; }; // Проверка на равенство.
-	//	void increment() { ++p; }; // Перемещение вперед.
-	//	void decrement() { --p; };// Перемещение назад.
-	//	void advance(std::ptrdiff_t n) { p += n; };  // Перемещение на "n" элементов.
-	//	std::ptrdiff_t distance_to(const Position& other) const { return other.p - p; }; // Расстояние до другой позиции.
-	//};
-
 	template <typename ValueType>
 	class IChunk {
 	public:
-
-		virtual int GetSize() = 0;
+		virtual ~IChunk() = default;
+		virtual int GetChunkSize() = 0;
 		virtual ValueType& at(size_t pos) = 0;
+		virtual ValueType& operator[](std::ptrdiff_t n) = 0;
 	};
-
 
 	template <typename ValueType>
 	class ChunkList_iterator {
 	private:
 		IChunk<ValueType>* list = nullptr; //
 		ValueType* current_value; //указатель на текущий элемент из чанка
-		int k = 0; //счетчик чтобы быть в пределах чанк k = 0, ... , N - 1
+		int k = 0; //индекс элемента в чанк листе
 	public:
 		using iterator_category = std::random_access_iterator_tag;
 		using value_type = ValueType;
@@ -90,32 +77,31 @@ namespace fefu_laboratory_two {
 		~ChunkList_iterator() = default;
 
 		friend void swap(ChunkList_iterator<ValueType>& a, ChunkList_iterator<ValueType>& b) {
-			std::swap(a.current_chunk, b.current_chunk); //why friend method can't access private field?
+			std::swap(a.current_value, b.current_value);
 		};
 
 		friend bool operator==(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return lhs.current_chunk == rhs.current_chunk;
+			return lhs.current_value == rhs.current_value;
 		};
 		friend bool operator!=(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return !(lhs.current_chunk == rhs.current_chunk);
+			return !(lhs.current_value == rhs.current_value);
 		};
 
 		reference operator*() const { return *current_value; };
 		pointer operator->() const { return current_value; };
 
+		/*ChunkList_iterator operator++(int) {
+		};
+		ChunkList_iterator operator--(int) {
+		};*/
+		
 		ChunkList_iterator& operator++() {
 			k++;
 			current_value = &list->at(k);
 			return (this);
 		};
-
-		/*ChunkList_iterator operator++(int) {
-		};
-		ChunkList_iterator operator--(int) {
-		};
-		*/
 
 		ChunkList_iterator& operator--() {
 			k--;
@@ -124,100 +110,49 @@ namespace fefu_laboratory_two {
 		};
 
 		ChunkList_iterator operator+(const difference_type& n) const {
+			return ChunkList_iterator(list, k + n, &list->at(k + n));
+		};
+
+
+		ChunkList_iterator operator-(const difference_type& n) const {
+			return ChunkList_iterator(list, k - n, &list->at(k - n));
+		};
+
+		ChunkList_iterator& operator+=(const difference_type& n) {
 			k += n;
 			current_value = &list->at(k);
 			return (this);
 		};
 
-
-		ChunkList_iterator operator-(const difference_type& n) const {
+		ChunkList_iterator& operator-=(const difference_type& n) {
 			k -= n;
 			current_value = &list->at(k);
 			return (this);
 		};
 
-		ChunkList_iterator& operator+=(const difference_type& n) { };
-
-		ChunkList_iterator& operator-=(const difference_type& n) { };
-
 		/*difference_type operator-(const ChunkList_iterator<ValueType>& rhs) {
 		};*/
 
-		reference operator[](const difference_type& n) { auto tmp = *this; tmp += n; return *tmp; };
+		reference operator[](const difference_type& n) {
+			return list[n];
+		};
 
 		friend bool operator<(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return lhs.pos.distance_to(rhs.pos) > 0;
+			return rhs.current_value - lhs.current_value > 0;
 		};
 		friend bool operator<=(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return !(rhs > lhs);
+			return !(rhs.current_value > lhs.current_value);
 		};
 		friend bool operator>(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return rhs < lhs;
+			return rhs.current_value < lhs.current_value;
 		};
 		friend bool operator>=(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return !(lhs < rhs);
+			return !(lhs.current_value < rhs.current_value);
 		};
-		// operator<=> will be handy
-	};
-
-	template <typename ValueType>
-	class ChunkList_const_iterator {
-		// Shouldn't give non const references on value
-	public:
-		using iterator_category = std::random_access_iterator_tag;
-		using value_type = ValueType;
-		using difference_type = std::ptrdiff_t;
-		using pointer = const ValueType*;
-		using reference = const ValueType&;
-
-		ChunkList_const_iterator() noexcept;
-		ChunkList_const_iterator(const ChunkList_const_iterator&) noexcept;
-		ChunkList_const_iterator(const ChunkList_iterator<ValueType>&) noexcept;
-
-		ChunkList_const_iterator& operator=(const ChunkList_const_iterator&);
-		ChunkList_const_iterator& operator=(const ChunkList_iterator<ValueType>&);
-
-		~ChunkList_const_iterator();
-
-		friend void swap(ChunkList_const_iterator<ValueType>&,
-			ChunkList_const_iterator<ValueType>&);
-
-		friend bool operator==(const ChunkList_const_iterator<ValueType>&,
-			const ChunkList_const_iterator<ValueType>&);
-		friend bool operator!=(const ChunkList_const_iterator<ValueType>&,
-			const ChunkList_const_iterator<ValueType>&);
-
-		reference operator*() const;
-		pointer operator->() const;
-
-		ChunkList_const_iterator& operator++();
-		ChunkList_const_iterator operator++(int);
-
-		ChunkList_const_iterator& operator--();
-		ChunkList_const_iterator operator--(int);
-
-		ChunkList_const_iterator operator+(const difference_type&) const;
-		ChunkList_const_iterator& operator+=(const difference_type&);
-
-		ChunkList_const_iterator operator-(const difference_type&) const;
-		ChunkList_const_iterator& operator-=(const difference_type&);
-
-		difference_type operator-(const ChunkList_const_iterator&) const;
-
-		reference operator[](const difference_type&);
-
-		friend bool operator<(const ChunkList_const_iterator<ValueType>&,
-			const ChunkList_const_iterator<ValueType>&);
-		friend bool operator<=(const ChunkList_const_iterator<ValueType>&,
-			const ChunkList_const_iterator<ValueType>&);
-		friend bool operator>(const ChunkList_const_iterator<ValueType>&,
-			const ChunkList_const_iterator<ValueType>&);
-		friend bool operator>=(const ChunkList_const_iterator<ValueType>&,
-			const ChunkList_const_iterator<ValueType>&);
 		// operator<=> will be handy
 	};
 
@@ -248,7 +183,7 @@ namespace fefu_laboratory_two {
 		using pointer = typename std::allocator_traits<Allocator>::pointer;
 		using const_pointer = typename std::allocator_traits<Allocator>::const_pointer;
 		using iterator = ChunkList_iterator<value_type>;
-		using const_iterator = ChunkList_const_iterator<value_type>;
+		using const_iterator = ChunkList_iterator<const value_type>;
 
 		int GetChunkSize() override { return N; } //return capacity of Chunk - N
 
@@ -266,13 +201,13 @@ namespace fefu_laboratory_two {
 		/// @param count the size of the container
 		/// @param value the value to initialize elements of the container with
 		/// @param alloc allocator to use for all memory allocations of this container
-		ChunkList(size_type count, const T& value, const Allocator& alloc = Allocator());
+		ChunkList(size_type count, const T& value, const Allocator& alloc = Allocator()) {};
 
 		/// @brief Constructs the container with count default-inserted instances of
 		/// T. No copies are made.
 		/// @param count the size of the container
 		/// @param alloc allocator to use for all memory allocations of this container
-		explicit ChunkList(size_type count, const Allocator& alloc = Allocator());
+		explicit ChunkList(size_type count, const Allocator& alloc = Allocator()) {};
 
 		/// @brief Constructs the container with the contents of the range [first,
 		/// last).
@@ -280,13 +215,13 @@ namespace fefu_laboratory_two {
 		/// @param first, last 	the range to copy the elements from
 		/// @param alloc allocator to use for all memory allocations of this container
 		template <class InputIt>
-		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator());
+		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator()) {};
 
 		/// @brief Copy constructor. Constructs the container with the copy of the
 		/// contents of other.
 		/// @param other another container to be used as source to initialize the
 		/// elements of the container with
-		ChunkList(const ChunkList& other);
+		ChunkList(const ChunkList& other) {};
 
 		/// @brief Constructs the container with the copy of the contents of other,
 		/// using alloc as the allocator.
@@ -327,7 +262,7 @@ namespace fefu_laboratory_two {
 		ChunkList(std::initializer_list<T> init, const Allocator& alloc = Allocator());
 
 		/// @brief Destructs the ChunkList.
-		~ChunkList();
+		~ChunkList() override {};
 
 		/// @brief Copy assignment operator. Replaces the contents with a copy of the
 		/// contents of other.
@@ -406,13 +341,22 @@ namespace fefu_laboratory_two {
 		/// bounds checking is performed.
 		/// @param pos position of the element to return
 		/// @return Reference to the requested element.
-		reference operator[](size_type pos);
+		reference operator[](difference_type pos) override {
+			int chunk_index = pos / N;
+			int elemnt_index = pos % N;
+			Chunk* tmp = first_chunk;
+			while (chunk_index > 0) {
+				tmp = tmp->next;
+				chunk_index--;
+			}
+			return tmp->list[elemnt_index];
+		};
 
 		/// @brief Returns a const reference to the element at specified location pos.
 		/// No bounds checking is performed.
 		/// @param pos position of the element to return
 		/// @return Const Reference to the requested element.
-		const_reference operator[](size_type pos) const;
+		const_reference operator[](difference_type pos) const;
 
 		/// @brief Returns a reference to the first element in the container.
 		/// Calling front on an empty container is undefined.
