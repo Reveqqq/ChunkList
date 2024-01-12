@@ -3,6 +3,7 @@
 #include <memory>
 #include <list>
 #include <algorithm>
+#include <exception>
 
 namespace fefu_laboratory_two {
 	template <typename T>
@@ -45,6 +46,7 @@ namespace fefu_laboratory_two {
 	public:
 		virtual ~IChunk() = default;
 		virtual int GetChunkSize() = 0;
+		virtual size_t size() const noexcept = 0;
 		virtual ValueType& at(size_t pos) = 0;
 		virtual ValueType& operator[](std::ptrdiff_t n) = 0;
 	};
@@ -61,6 +63,8 @@ namespace fefu_laboratory_two {
 		using difference_type = std::ptrdiff_t;
 		using pointer = ValueType*;
 		using reference = ValueType&;
+
+		int GetIndex() { return k; };
 
 		constexpr ChunkList_iterator() noexcept = default;
 
@@ -92,21 +96,39 @@ namespace fefu_laboratory_two {
 		reference operator*() const { return *current_value; };
 		pointer operator->() const { return current_value; };
 
-		/*ChunkList_iterator operator++(int) {
-		};
-		ChunkList_iterator operator--(int) {
-		};*/
-		
-		ChunkList_iterator& operator++() {
+		ChunkList_iterator operator++(int) {
+			if (k + 1 == list->size())
+				return ChunkList_iterator();
 			k++;
 			current_value = &list->at(k);
-			return (this);
+			return *this;
+		};
+		ChunkList_iterator operator--(int) {
+			if (k - 1 == -1)
+				throw std::exception();
+			k--;
+			current_value = &list->at(k);
+			return *this;
+		};
+
+		ChunkList_iterator& operator++() {
+			if (k + 1 == list->size()) {
+				this->current_value = nullptr;
+				this->list = nullptr;
+				this->k = 0;
+				return *this;
+			}
+			k++;
+			current_value = &list->at(k);
+			return *this;
 		};
 
 		ChunkList_iterator& operator--() {
+			if (k - 1 == -1)
+				throw std::exception();
 			k--;
 			current_value = &list->at(k);
-			return (this);
+			return *this;
 		};
 
 		ChunkList_iterator operator+(const difference_type& n) const {
@@ -168,8 +190,15 @@ namespace fefu_laboratory_two {
 			Chunk() {
 				list = allocator.allocate(N);
 			}
+
+			T* copyData() {
+				T* data = allocator.allocate(N);
+				for (int i = 0; i < N; i++)
+					data = list[i];
+				return data;
+			}
 		};
-	private:
+	protected:
 		Chunk* first_chunk = nullptr;
 		int list_size = 0;
 	public:
@@ -185,7 +214,7 @@ namespace fefu_laboratory_two {
 		using iterator = ChunkList_iterator<value_type>;
 		using const_iterator = ChunkList_iterator<const value_type>;
 
-		int GetChunkSize() override { return N; } //return capacity of Chunk - N
+		int GetChunkSize() override { return N; } //return capacity of Chunk - N TOOD: delete?
 
 		/// @brief Default constructor. Constructs an empty container with a
 		/// default-constructed allocator.
@@ -201,7 +230,7 @@ namespace fefu_laboratory_two {
 		/// @param count the size of the container
 		/// @param value the value to initialize elements of the container with
 		/// @param alloc allocator to use for all memory allocations of this container
-		ChunkList(size_type count, const T& value, const Allocator& alloc = Allocator()) {};
+		ChunkList(size_type count, const T& value = T(), const Allocator& alloc = Allocator());
 
 		/// @brief Constructs the container with count default-inserted instances of
 		/// T. No copies are made.
@@ -215,13 +244,26 @@ namespace fefu_laboratory_two {
 		/// @param first, last 	the range to copy the elements from
 		/// @param alloc allocator to use for all memory allocations of this container
 		template <class InputIt>
-		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator()) {};
+		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator());
 
 		/// @brief Copy constructor. Constructs the container with the copy of the
 		/// contents of other.
 		/// @param other another container to be used as source to initialize the
 		/// elements of the container with
-		ChunkList(const ChunkList& other) {};
+		ChunkList(const ChunkList& other) { //TODO: copy: prev next chunk_size
+			auto oldList = other.first_chunk;
+			first_chunk = new Chunk();
+			auto newList = first_chunk;
+			while (oldList != nullptr) {
+				newList->list = other.first_chunk->copyData();
+				if (oldList->next != nullptr) {
+					newList->next = new Chunk();
+					newList = newList->next;
+				}
+				oldList = oldList->next;
+			}
+			list_size = other.list_size;
+		};
 
 		/// @brief Constructs the container with the copy of the contents of other,
 		/// using alloc as the allocator.
@@ -262,13 +304,18 @@ namespace fefu_laboratory_two {
 		ChunkList(std::initializer_list<T> init, const Allocator& alloc = Allocator());
 
 		/// @brief Destructs the ChunkList.
-		~ChunkList() override {};
+		~ChunkList() override {
+			clear();
+		};
 
 		/// @brief Copy assignment operator. Replaces the contents with a copy of the
 		/// contents of other.
 		/// @param other another container to use as data source
 		/// @return *this
-		ChunkList& operator=(const ChunkList& other);
+		ChunkList& operator=(const ChunkList& other) {
+			(this) = new ChunkList(other);
+			return (*this);
+		};
 
 		/**
 		 * Move assignment operator.
@@ -291,7 +338,12 @@ namespace fefu_laboratory_two {
 		/// @brief Replaces the contents with count copies of value
 		/// @param count
 		/// @param value
-		void assign(size_type count, const T& value);
+		void assign(size_type count, const T& value) {
+			clear();
+			for (int i = 0; i < count; i++)
+				push_back(value);
+			list_size = count;
+		};
 
 		/// @brief Replaces the contents with copies of those in the range [first,
 		/// last).
@@ -299,16 +351,18 @@ namespace fefu_laboratory_two {
 		/// @param first
 		/// @param last
 		template <class InputIt>
-		void assign(InputIt first, InputIt last);
+		void assignT(InputIt first, InputIt last) {};
 
 		/// @brief Replaces the contents with the elements from the initializer list
 		/// ilis
 		/// @param ilist
-		void assign(std::initializer_list<T> ilist);
+		void assign(std::initializer_list<T> ilist) {};
 
 		/// @brief Returns the allocator associated with the container.
 		/// @return The associated allocator.
-		allocator_type get_allocator() const noexcept;
+		allocator_type get_allocator() const noexcept {
+			return first_chunk->allocator;
+		};
 
 		/// ELEMENT ACCESS
 
@@ -335,7 +389,7 @@ namespace fefu_laboratory_two {
 		/// @param pos position of the element to return
 		/// @return Const Reference to the requested element.
 		/// @throw std::out_of_range
-		const_reference at(size_type pos) const;
+		const_reference at(size_type pos) const { return at(pos); };
 
 		/// @brief Returns a reference to the element at specified location pos. No
 		/// bounds checking is performed.
@@ -356,72 +410,90 @@ namespace fefu_laboratory_two {
 		/// No bounds checking is performed.
 		/// @param pos position of the element to return
 		/// @return Const Reference to the requested element.
-		const_reference operator[](difference_type pos) const;
+		const_reference operator[](difference_type pos) const { return operator[](pos); };
 
 		/// @brief Returns a reference to the first element in the container.
 		/// Calling front on an empty container is undefined.
 		/// @return Reference to the first element
-		reference front();
+		reference front() {
+			return first_chunk->list[0];
+		};
 
 		/// @brief Returns a const reference to the first element in the container.
 		/// Calling front on an empty container is undefined.
 		/// @return Const reference to the first element
-		const_reference front() const;
+		const_reference front() const {
+			return front();
+		};
 
 		/// @brief Returns a reference to the last element in the container.
 		/// Calling back on an empty container causes undefined behavior.
 		/// @return Reference to the last element.
-		reference back();
+		reference back() {
+			Chunk* tmp = first_chunk;
+			while (tmp->next != nullptr) {
+				tmp = tmp->next;
+			}
+			return tmp->list[tmp->chunk_size - 1];
+		};
 
 		/// @brief Returns a const reference to the last element in the container.
 		/// Calling back on an empty container causes undefined behavior.
 		/// @return Const Reference to the last element.
-		const_reference back() const;
+		const_reference back() const { return back(); };
 
 		/// ITERATORS
 
 		/// @brief Returns an iterator to the first element of the ChunkList.
 		/// If the ChunkList is empty, the returned iterator will be equal to end().
 		/// @return Iterator to the first element.
-		iterator begin() noexcept;
+		iterator begin() noexcept {
+			auto it = ChunkList_iterator<T>(this, 0, &at(0));
+			return it;
+		};
 
 		/// @brief Returns an iterator to the first element of the ChunkList.
 		/// If the ChunkList is empty, the returned iterator will be equal to end().
 		/// @return Iterator to the first element.
-		const_iterator begin() const noexcept;
+		const_iterator begin() const noexcept { return begin(); };
 
 		/// @brief Same to begin()
-		const_iterator cbegin() const noexcept;
+		const_iterator cbegin() const noexcept { return begin(); };
 
 		/// @brief Returns an iterator to the element following the last element of
 		/// the ChunkList. This element acts as a placeholder; attempting to access it
 		/// results in undefined behavior.
 		/// @return Iterator to the element following the last element.
-		iterator end() noexcept;
+		iterator end() noexcept {
+			return ChunkList_iterator<T>();
+		};
 
 		/// @brief Returns an constant iterator to the element following the last
 		/// element of the ChunkList. This element acts as a placeholder; attempting to
 		/// access it results in undefined behavior.
 		/// @return Constant Iterator to the element following the last element.
-		const_iterator end() const noexcept;
+		const_iterator end() const noexcept { return end(); };
 
 		/// @brief Same to end()
-		const_iterator cend() const noexcept;
+		const_iterator cend() const noexcept { return end(); };
 
 		/// CAPACITY
 
 		/// @brief Checks if the container has no elements
 		/// @return true if the container is empty, false otherwise
-		bool empty() const noexcept;
+		bool empty() const noexcept { return list_size == 0; };
 
 		/// @brief Returns the number of elements in the container
 		/// @return The number of elements in the container.
-		size_type size() const noexcept;
+		size_type size() const noexcept override { return list_size; };
 
 		/// @brief Returns the maximum number of elements the container is able to
 		/// hold due to system or library implementation limitations
 		/// @return Maximum number of elements.
-		size_type max_size() const noexcept;
+		size_type max_size() const noexcept {
+			int r = list_size % N;
+			return (r == 0 ? list_size / N : (list_size / N + 1));
+		};
 
 		/// @brief Requests the removal of unused capacity.
 		/// It is a non-binding request to reduce the memory usage without changing
@@ -434,7 +506,16 @@ namespace fefu_laboratory_two {
 		/// @brief Erases all elements from the container.
 		/// nvalidates any references, pointers, or iterators referring to contained
 		/// elements. Any past-the-end iterators are also invalidated.
-		void clear() noexcept;
+		void clear() noexcept {
+			Chunk* cur = first_chunk;
+			while (cur != nullptr) {
+				Chunk* tmp = cur;
+				cur = cur->next;
+				delete tmp;
+			}
+			list_size = 0;
+			first_chunk = nullptr;
+		};
 
 		/// @brief Inserts value before pos.
 		/// @param pos iterator before which the content will be inserted.
@@ -484,11 +565,17 @@ namespace fefu_laboratory_two {
 		/// @param pos iterator to the element to remove
 		/// @return Iterator following the last removed element.
 		iterator erase(const_iterator pos) { //сдвигаем все элементы влево удаляя текущий
-			auto tmp = pos.k;
-			for (int i = tmp + 1; i < list_size; i++) {
+			//TODO: удалять чанк если удалили последний элемент
+			auto index = pos.GetIndex();
+			if (index + 1 == list_size) {
+				list_size--;
+				return ChunkList_iterator<T>();
+			}
+			for (int i = index + 1; i < list_size; i++) {
 				at(i - 1) = at(i);
 			}
 			list_size--;
+			return ChunkList_iterator<T>(this, index, &at(index))
 		};
 
 		/// @brief Removes the elements in the range [first, last).
@@ -500,6 +587,9 @@ namespace fefu_laboratory_two {
 		/// The new element is initialized as a copy of value.
 		/// @param value the value of the element to append
 		void push_back(const T& value) {
+			if (first_chunk == nullptr)
+				first_chunk = new Chunk();
+
 			Chunk* tmp = first_chunk;
 			while (tmp->next != nullptr)
 				tmp = tmp->next;
@@ -516,7 +606,19 @@ namespace fefu_laboratory_two {
 		/// @brief Appends the given element value to the end of the container.
 		/// Value is moved into the new element.
 		/// @param value the value of the element to append
-		void push_back(T&& value);
+		void push_back(T&& value) {
+			Chunk* tmp = first_chunk;
+			while (tmp->next != nullptr)
+				tmp = tmp->next;
+			if (tmp->chunk_size == N)
+			{
+				tmp->next = new Chunk();
+				tmp = tmp->next;
+			}
+			tmp->list[tmp->chunk_size] = value;
+			tmp->chunk_size++;
+			list_size++;
+		};
 
 		/// @brief Appends a new element to the end of the container.
 		/// @param ...args arguments to forward to the constructor of the element
