@@ -81,7 +81,9 @@ namespace fefu_laboratory_two {
 		virtual ~ChunkList_iterator() = default;
 
 		friend void swap(ChunkList_iterator<ValueType>& a, ChunkList_iterator<ValueType>& b) {
+			std::swap(a.list, b.list);
 			std::swap(a.current_value, b.current_value);
+			std::swap(a.k, b.k);
 		};
 
 		friend bool operator==(const ChunkList_iterator<ValueType>& lhs,
@@ -161,19 +163,19 @@ namespace fefu_laboratory_two {
 
 		friend bool operator<(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return rhs.current_value - lhs.current_value > 0;
+			return rhs.k - lhs.k > 0;
 		};
 		friend bool operator<=(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return !(rhs.current_value > lhs.current_value);
+			return !(rhs.k > lhs.k);
 		};
 		friend bool operator>(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return rhs.current_value < lhs.current_value;
+			return rhs.k < lhs.k;
 		};
 		friend bool operator>=(const ChunkList_iterator<ValueType>& lhs,
 			const ChunkList_iterator<ValueType>& rhs) {
-			return !(lhs.current_value < rhs.current_value);
+			return !(lhs.k < rhs.k);
 		};
 		// operator<=> will be handy
 	};
@@ -190,6 +192,9 @@ namespace fefu_laboratory_two {
 		ChunkList_const_iterator(IChunk<ValueType>* chunk, int index, ValueType* value) :
 			ChunkList_iterator<ValueType>(chunk, index, value) {};
 
+		ChunkList_const_iterator(const IChunk<ValueType>* chunk, int index, const ValueType* value) :
+			ChunkList_iterator<ValueType>(const_cast<IChunk<ValueType>*>(chunk), index, const_cast<ValueType*>(value)) {};
+
 		ChunkList_const_iterator(const ChunkList_const_iterator& other) noexcept = default;
 
 		ChunkList_const_iterator& operator=(const ChunkList_const_iterator&) = default;
@@ -197,7 +202,9 @@ namespace fefu_laboratory_two {
 		~ChunkList_const_iterator() override = default;
 
 		friend void swap(ChunkList_const_iterator<ValueType>& a, ChunkList_const_iterator<ValueType>& b) {
+			std::swap(a.list, b.list);
 			std::swap(a.current_value, b.current_value);
+			std::swap(a.k, b.k);
 		};
 
 		friend bool operator==(const ChunkList_const_iterator<ValueType>& lhs,
@@ -268,6 +275,25 @@ namespace fefu_laboratory_two {
 			return (this);
 		};
 
+		friend bool operator<(const ChunkList_const_iterator<ValueType>& lhs,
+			const ChunkList_const_iterator<ValueType>& rhs) {
+			return rhs.k - lhs.k > 0;
+		};
+
+		friend bool operator<=(const ChunkList_const_iterator<ValueType>& lhs,
+			const ChunkList_const_iterator<ValueType>& rhs) {
+			return !(rhs.k > lhs.k);
+		};
+
+		friend bool operator>(const ChunkList_const_iterator<ValueType>& lhs,
+			const ChunkList_const_iterator<ValueType>& rhs) {
+			return rhs.k < lhs.k;
+		};
+		
+		friend bool operator>=(const ChunkList_const_iterator<ValueType>& lhs,
+			const ChunkList_const_iterator<ValueType>& rhs) {
+			return !(lhs.k < rhs.k);
+		};
 	};
 
 	template <typename T, int N, typename Allocator = Allocator<T>>
@@ -520,10 +546,10 @@ namespace fefu_laboratory_two {
 		/// @param pos position of the element to return
 		/// @return Reference to the requested element.
 		/// @throw std::out_of_range
-		reference at(size_type pos) override { //at кидает exception если за пределами в отличии от []
+		reference at(size_type pos) override {
 			int chunk_index = pos / N;
 			int elemnt_index = pos % N;
-			if (pos >= max_size())
+			if (pos >= max_size() || pos < 0)
 				throw std::out_of_range("Out of range");
 
 			Chunk* tmp = first_chunk;
@@ -543,7 +569,7 @@ namespace fefu_laboratory_two {
 		const_reference at(size_type pos) const {
 			int chunk_index = pos / N;
 			int elemnt_index = pos % N;
-			if (pos >= max_size())
+			if (pos >= max_size() || pos < 0)
 				throw std::out_of_range("Out of range");
 
 			Chunk* tmp = first_chunk;
@@ -639,26 +665,11 @@ namespace fefu_laboratory_two {
 			return ChunkList_iterator<T>(this, 0, &at(0));
 		};
 
-
-
-		/*operator ChunkList<const T, N>() {
-			ChunkList<const T, N> newChunkList;
-			newChunkList.first_chunk = this->first_chunk;
-			newChunkList.list_size = this->list_size;
-			return newChunkList;
-		}*/
-
 		/// @brief Returns an iterator to the first element of the ChunkList.
 		/// If the ChunkList is empty, the returned iterator will be equal to end().
 		/// @return Iterator to the first element.
-		const_iterator begin() const noexcept { //TODO: как сделать каст к 
-			//<ChunkList<const T,N>
-//ChunkList<const T, N>& const_obj = const_cast<ChunkList<const T,N>&>(this);
-			return ChunkList_const_iterator<T>(
-				this,
-				0,
-				&at(0)
-			);
+		const_iterator begin() const noexcept {
+			return ChunkList_const_iterator<T>(this, 0, &at(0));
 		};
 
 		/// @brief Same to begin()
@@ -727,45 +738,81 @@ namespace fefu_laboratory_two {
 		/// @param pos iterator before which the content will be inserted.
 		/// @param value element value to insert
 		/// @return Iterator pointing to the inserted value.
-		iterator insert(const_iterator pos, const T& value) { //TODO: assert is correct
-			//if (pos == cend())
-			//	return end();
-
-			//if (max_size() > list_size) {
-			//	int i = 0;
-			//	int index = pos.GetIndex();
-			//	Chunk* tmp = first_chunk;
-			//	while (tmp->next != nullptr)
-			//		tmp = tmp->next;
-			//	ChunkList_iterator<T> it =
-			//		ChunkList_iterator<T>(
-			//			tmp,
-			//			tmp->chunk_size - 1,
-			//			tmp->list[chunk_size - 1]);
-			//	for (; it != pos; it--, i++)
-			//		at(list_size - i) = at(list_size - i - 1);
-			//	at(index) = value;
-			//	list_size++;
-			//}
-			//else {
-			//	//
-			//}
-
-			//int index = pos.GetIndex();
-			//for (int i = index + 1; i < list_size; i++) {
-			//	if (i + 1 < max_size())
-			//		at(i + 1) = at(i);
-			//}
-			//at(index) = value;
-			//list_size++;
-			//return ChunkList_iterator<T>(this, index, &at(index));
+		iterator insert(const_iterator pos, const T& value) {
+			if (pos == cend())
+				return end();
+			int index = pos.GetIndex();
+			int i = 0;
+			Chunk* tmp = first_chunk;
+			while (tmp->next != nullptr)
+				tmp = tmp->next;
+			if (max_size() > list_size) {
+				ChunkList_iterator<T> it = ChunkList_iterator<T>(
+					this,
+					list_size - 1,
+					&tmp->list[tmp->chunk_size - 1]
+				);
+				for (; it >= pos; it--, i++)
+					at(list_size - i) = at(list_size - i - 1);
+				list_size++;
+			}
+			else {
+				tmp->next = new Chunk(); //дать новому чанку prev
+				ChunkList_iterator<T> it = ChunkList_iterator<T>(
+					this,
+					list_size - 1,
+					&tmp->list[tmp->chunk_size - 1]
+				);
+				Chunk* tmpChunk = tmp;
+				tmp = tmp->next;
+				tmp->prev = tmpChunk;
+				list_size++;
+				for (; it >= pos; it--, i++)
+					at(list_size - 1 - i) = at(list_size - i - 2);
+			}
+			at(index) = value;
+			return ChunkList_iterator<T>(this, index, &at(index));
 		};
 
 		/// @brief Inserts value before pos.
 		/// @param pos iterator before which the content will be inserted.
 		/// @param value element value to insert
 		/// @return Iterator pointing to the inserted value.
-		iterator insert(const_iterator pos, T&& value) {};
+		iterator insert(const_iterator pos, T&& value) {
+			if (pos == cend())
+				return end();
+			int index = pos.GetIndex();
+			int i = 0;
+			Chunk* tmp = first_chunk;
+			while (tmp->next != nullptr)
+				tmp = tmp->next;
+			if (max_size() > list_size) {
+				ChunkList_iterator<T> it = ChunkList_iterator<T>(
+					this,
+					list_size - 1,
+					&tmp->list[tmp->chunk_size - 1]
+				);
+				for (; it >= pos; it--, i++)
+					at(list_size - i) = at(list_size - i - 1);
+				list_size++;
+			}
+			else {
+				tmp->next = new Chunk(); //дать новому чанку prev
+				ChunkList_iterator<T> it = ChunkList_iterator<T>(
+					this,
+					list_size - 1,
+					&tmp->list[tmp->chunk_size - 1]
+				);
+				Chunk* tmpChunk = tmp;
+				tmp = tmp->next;
+				tmp->prev = tmpChunk;
+				list_size++;
+				for (; it >= pos; it--, i++)
+					at(list_size - 1 - i) = at(list_size - i - 2);
+			}
+			at(index) = std::move(value);
+			return ChunkList_iterator<T>(this, index, &at(index));
+		};
 
 		/// @brief Inserts count copies of the value before pos.
 		/// @param pos iterator before which the content will be inserted.
