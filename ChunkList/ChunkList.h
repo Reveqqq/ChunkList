@@ -55,7 +55,7 @@ namespace fefu_laboratory_two {
 	class ChunkList_iterator {
 	protected:
 		IChunk<ValueType>* list = nullptr; //
-		ValueType* current_value; //указатель на текущий элемент из чанка
+		ValueType* current_value = nullptr; //указатель на текущий элемент из чанка
 		int k = 0; //индекс элемента в чанк листе
 	public:
 		using iterator_category = std::random_access_iterator_tag;
@@ -106,9 +106,10 @@ namespace fefu_laboratory_two {
 			return *this;
 		};
 		ChunkList_iterator operator--(int) {
-			if (k - 1 == -1)
-				throw std::exception();
 			k--;
+			if (k <= -1)
+				return *this;
+
 			current_value = &list->at(k);
 			return *this;
 		};
@@ -126,9 +127,10 @@ namespace fefu_laboratory_two {
 		};
 
 		ChunkList_iterator& operator--() {
-			if (k - 1 == -1)
-				throw std::exception();
 			k--;
+			if (k <= -1)
+				return *this;
+
 			current_value = &list->at(k);
 			return *this;
 		};
@@ -985,7 +987,9 @@ namespace fefu_laboratory_two {
 		reference emplace_front(Args&&... args);
 
 		/// @brief Removes the first element of the container.
-		void pop_front();
+		void pop_front() {
+			erase(cbegin());
+		};
 
 		/// @brief Resizes the container to contain count elements.
 		/// If the current size is greater than count, the container is reduced to its
@@ -1030,7 +1034,7 @@ namespace fefu_laboratory_two {
 			const ChunkList<U, N, Alloc>& rhs) {
 			if (lhs.list_size != rhs.list_size)
 				return false;
-			
+
 			for (int i = 0; i < lhs.list_size; i++)
 				if (lhs.at(i) != rhs.at(i))
 					return false;
