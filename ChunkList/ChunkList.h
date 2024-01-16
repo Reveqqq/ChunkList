@@ -145,13 +145,13 @@ namespace fefu_laboratory_two {
 		ChunkList_iterator& operator+=(const difference_type& n) {
 			k += n;
 			current_value = &list->at(k);
-			return (this);
+			return *this;
 		};
 
 		ChunkList_iterator& operator-=(const difference_type& n) {
 			k -= n;
 			current_value = &list->at(k);
-			return (this);
+			return *this;
 		};
 
 		/*difference_type operator-(const ChunkList_iterator<ValueType>& rhs) {
@@ -266,13 +266,13 @@ namespace fefu_laboratory_two {
 		ChunkList_const_iterator& operator+=(const difference_type& n) {
 			this->k += n;
 			this->current_value = &this->list->at(this->k);
-			return (this);
+			return *this;
 		};
 
 		ChunkList_const_iterator& operator-=(const difference_type& n) {
 			this->k -= n;
 			this->current_value = &this->list->at(this->k);
-			return (this);
+			return *this;
 		};
 
 		friend bool operator<(const ChunkList_const_iterator<ValueType>& lhs,
@@ -289,7 +289,7 @@ namespace fefu_laboratory_two {
 			const ChunkList_const_iterator<ValueType>& rhs) {
 			return rhs.k < lhs.k;
 		};
-		
+
 		friend bool operator>=(const ChunkList_const_iterator<ValueType>& lhs,
 			const ChunkList_const_iterator<ValueType>& rhs) {
 			return !(lhs.k < rhs.k);
@@ -394,7 +394,7 @@ namespace fefu_laboratory_two {
 		/// @param first, last 	the range to copy the elements from
 		/// @param alloc allocator to use for all memory allocations of this container
 		template <class InputIt>
-		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator());
+		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator()) {};
 
 		/// @brief Copy constructor. Constructs the container with the copy of the
 		/// contents of other.
@@ -405,8 +405,8 @@ namespace fefu_laboratory_two {
 			first_chunk = new Chunk();
 			auto newList = first_chunk;
 			while (oldList != nullptr) {
-				newList->list = other.first_chunk->copyData();
-				newList->chunk_size = other.first_chunk->chunk_size;
+				newList->list = oldList->copyData();
+				newList->chunk_size = oldList->chunk_size;
 				if (oldList->next != nullptr) {
 					newList->next = new Chunk();
 					auto tmp = newList;
@@ -443,8 +443,8 @@ namespace fefu_laboratory_two {
 		 * elements of the container with
 		 */
 		ChunkList(ChunkList&& other) {
-			first_chunk = other.first_chunk;
-			list_size = other.list_size;
+			first_chunk = std::move(other.first_chunk);
+			list_size = std::move(other.list_size);
 			other.clear();
 		};
 
@@ -458,7 +458,14 @@ namespace fefu_laboratory_two {
 		 * elements of the container with
 		 * @param alloc allocator to use for all memory allocations of this container
 		 */
-		ChunkList(ChunkList&& other, const Allocator& alloc);
+		ChunkList(ChunkList&& other, const Allocator& alloc) {
+			this = ChunkList(other);
+			Chunk* tmp = first_chunk;
+			while (tmp != nullptr) {
+				tmp->allocator = alloc;
+				tmp = tmp->next;
+			}
+		};
 
 		/// @brief Constructs the container with the contents of the initializer list
 		/// init.
@@ -494,8 +501,8 @@ namespace fefu_laboratory_two {
 		ChunkList& operator=(ChunkList&& other) {
 			if (this == &other)
 				return this;
-			this->first_chunk = other.first_chunk;
-			this->list_size = other.list_size;
+			first_chunk = std::move(other.first_chunk);
+			list_size = std::move(other.list_size);
 			other.clear();
 
 			return *this;
@@ -537,6 +544,13 @@ namespace fefu_laboratory_two {
 		allocator_type get_allocator() const noexcept {
 			return first_chunk->allocator;
 		};
+
+		Chunk* last_chunk() {
+			Chunk* tmp = first_chunk;
+			while (tmp->next != nullptr)
+				tmp = tmp->next;
+			return tmp;
+		}
 
 		/// ELEMENT ACCESS
 
@@ -636,7 +650,7 @@ namespace fefu_laboratory_two {
 		reference back() {
 			if (list_size == 0)
 				throw std::logic_error("Empty");
-			Chunk* tmp = first_chunk;
+			Chunk* tmp = last_chunk();
 			while (tmp->next != nullptr) {
 				tmp = tmp->next;
 			}
@@ -649,10 +663,7 @@ namespace fefu_laboratory_two {
 		const_reference back() const {
 			if (list_size == 0)
 				throw std::logic_error("Empty");
-			Chunk* tmp = first_chunk;
-			while (tmp->next != nullptr) {
-				tmp = tmp->next;
-			}
+			Chunk* tmp = last_chunk();
 			return tmp->list[tmp->chunk_size - 1];
 		};
 
@@ -743,9 +754,7 @@ namespace fefu_laboratory_two {
 				return end();
 			int index = pos.GetIndex();
 			int i = 0;
-			Chunk* tmp = first_chunk;
-			while (tmp->next != nullptr)
-				tmp = tmp->next;
+			Chunk* tmp = last_chunk();
 			if (max_size() > list_size) {
 				ChunkList_iterator<T> it = ChunkList_iterator<T>(
 					this,
@@ -757,7 +766,7 @@ namespace fefu_laboratory_two {
 				list_size++;
 			}
 			else {
-				tmp->next = new Chunk(); //дать новому чанку prev
+				tmp->next = new Chunk();
 				ChunkList_iterator<T> it = ChunkList_iterator<T>(
 					this,
 					list_size - 1,
@@ -771,6 +780,7 @@ namespace fefu_laboratory_two {
 					at(list_size - 1 - i) = at(list_size - i - 2);
 			}
 			at(index) = value;
+			tmp->chunk_size++;
 			return ChunkList_iterator<T>(this, index, &at(index));
 		};
 
@@ -783,9 +793,7 @@ namespace fefu_laboratory_two {
 				return end();
 			int index = pos.GetIndex();
 			int i = 0;
-			Chunk* tmp = first_chunk;
-			while (tmp->next != nullptr)
-				tmp = tmp->next;
+			Chunk* tmp = last_chunk();
 			if (max_size() > list_size) {
 				ChunkList_iterator<T> it = ChunkList_iterator<T>(
 					this,
@@ -811,6 +819,7 @@ namespace fefu_laboratory_two {
 					at(list_size - 1 - i) = at(list_size - i - 2);
 			}
 			at(index) = std::move(value);
+			tmp->chunk_size++;
 			return ChunkList_iterator<T>(this, index, &at(index));
 		};
 
@@ -849,36 +858,60 @@ namespace fefu_laboratory_two {
 		/// @brief Removes the element at pos.
 		/// @param pos iterator to the element to remove
 		/// @return Iterator following the last removed element.
-		iterator erase(const_iterator pos) { //сдвигаем все элементы влево удаляя текущий
-			//TODO: удалять чанк если удалили последний элемент
+		iterator erase(const_iterator pos) {
+			//сдвигаем все элементы влево удаляя текущий
 			auto index = pos.GetIndex();
 			if (index + 1 == list_size) {
 				list_size--;
 				return ChunkList_iterator<T>();
 			}
+
 			for (int i = index + 1; i < list_size; i++) {
 				at(i - 1) = at(i);
 			}
+
+			Chunk* tmp = last_chunk();
+			if (list_size == max_size() - N + 1) {
+				tmp = tmp->prev;
+				tmp->next = nullptr;
+			}
+			else
+				tmp->chunk_size--;
+
+
 			list_size--;
+
 			return ChunkList_iterator<T>(this, index, &at(index));
 		};
 
 		/// @brief Removes the elements in the range [first, last).
 		/// @param first,last range of elements to remove
 		/// @return Iterator following the last removed element.
-		iterator erase(const_iterator first, const_iterator last) { //TODO: CHECK
-			int i = 0;
+		iterator erase(const_iterator first, const_iterator last) {
+			//TODO: chunk_size--;!!
+			int i = 1;
 			int temp = 0;
 			int index = last.GetIndex();
-			auto it = (*this).begin();
+			auto it_count = (*this).begin();
 
-			for (it; it != first; it++, i++);
-			for (it = first; it != last; it++, temp++, i++);
+			for (it_count; it_count != first; it_count++, i++);
+			for (it_count = first; it_count != last; it_count++, temp++, i++);
 
-			for (auto it = last; it != (*this).end(); it++, i++)
-				at(i - 1) = at(i);
+			for (; i < list_size; i++)
+				at(i - temp) = at(i);
 
+			Chunk* tmp = last_chunk();
 			list_size -= temp;
+			while (temp > 0) { //TODO: CHECK!!!
+				if (tmp->chunk_size > 0) {
+					tmp->chunk_size--;
+					temp--;
+				}
+				else {
+					tmp = tmp->prev;
+					tmp->next = nullptr;
+				}
+			}
 			return ChunkList_iterator<T>(this, index, &at(index));
 		};
 
@@ -889,13 +922,13 @@ namespace fefu_laboratory_two {
 			if (first_chunk == nullptr)
 				first_chunk = new Chunk();
 
-			Chunk* tmp = first_chunk;
-			while (tmp->next != nullptr)
-				tmp = tmp->next;
+			Chunk* tmp = last_chunk();
 			if (tmp->chunk_size == N)
 			{
 				tmp->next = new Chunk();
+				auto tmpPrev = tmp;
 				tmp = tmp->next;
+				tmp->prev = tmpPrev;
 			}
 			tmp->list[tmp->chunk_size] = value;
 			tmp->chunk_size++;
@@ -906,15 +939,16 @@ namespace fefu_laboratory_two {
 		/// Value is moved into the new element.
 		/// @param value the value of the element to append
 		void push_back(T&& value) {
-			Chunk* tmp = first_chunk;
-			while (tmp->next != nullptr)
-				tmp = tmp->next;
+			if (first_chunk == nullptr)
+				first_chunk = new Chunk();
+
+			Chunk* tmp = last_chunk();
 			if (tmp->chunk_size == N)
 			{
 				tmp->next = new Chunk();
 				tmp = tmp->next;
 			}
-			tmp->list[tmp->chunk_size] = std::move(value); //TODO: correct??
+			tmp->list[tmp->chunk_size] = std::move(value);
 			tmp->chunk_size++;
 			list_size++;
 		};
@@ -926,11 +960,9 @@ namespace fefu_laboratory_two {
 		reference emplace_back(Args&&... args);
 
 		/// @brief Removes the last element of the container.
-		void pop_back() {
+		void pop_back() { //TODO: del chunk if empty?
 			this->list_size--;
-			Chunk* tmp = this->first_chunk;
-			while (tmp->next != nullptr)
-				tmp = tmp->next;
+			Chunk* tmp = last_chunk();
 			tmp->chunk_size--;
 		};
 
@@ -995,13 +1027,24 @@ namespace fefu_laboratory_two {
 		/// @param lhs,rhs ChunkLists whose contents to compare
 		template <class U, int N, class Alloc>
 		friend bool operator==(const ChunkList<U, N, Alloc>& lhs,
-			const ChunkList<U, N, Alloc>& rhs);
+			const ChunkList<U, N, Alloc>& rhs) {
+			if (lhs.list_size != rhs.list_size)
+				return false;
+			
+			for (int i = 0; i < lhs.list_size; i++)
+				if (lhs.at(i) != rhs.at(i))
+					return false;
+
+			return true;
+		};
 
 		/// @brief Checks if the contents of lhs and rhs are not equal
 		/// @param lhs,rhs ChunkLists whose contents to compare
 		template <class U, int N, class Alloc>
 		friend bool operator!=(const ChunkList<U, N, Alloc>& lhs,
-			const ChunkList<U, N, Alloc>& rhs);
+			const ChunkList<U, N, Alloc>& rhs) {
+			return !operator==(lhs, rhs);
+		};
 
 		/// @brief Compares the contents of lhs and rhs lexicographically.
 		/// @param lhs,rhs ChunkLists whose contents to compare
