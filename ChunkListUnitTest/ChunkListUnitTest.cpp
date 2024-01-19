@@ -189,7 +189,7 @@ namespace ChunkListUnitTest
 	};
 
 	TEST_CLASS(ModifierTests) {
-		TEST_METHOD(InsertShould) {
+		TEST_METHOD(InsertShould1) {
 			ChunkList<int, 8> list;
 			ChunkList<int, 8> list_should;
 			list_should.push_back(100);
@@ -213,6 +213,21 @@ namespace ChunkListUnitTest
 			list.insert(it, 100);
 
 			Assert::IsTrue(list == list_should);
+		}
+
+		TEST_METHOD(InsertShould2) {
+			std::vector<int> vec = { 123,54,23 };
+			ChunkList<int, 8> list1 = { 1,2,3,4,5 };
+			ChunkList<int, 8> list2 = { 1,2,3,4,5 };
+			ChunkList<int, 8> list_should = { 23,54,123,1,2,3,4,5 };
+
+			list1.insertIt(list1.cbegin(), vec.begin(), vec.end());
+
+			Assert::IsTrue(list1 == list_should);
+
+			list2.insert(list2.cbegin(), { 123,54,23 });
+
+			Assert::IsTrue(list2 == list_should);
 		}
 
 		TEST_METHOD(ResizeShould)

@@ -772,7 +772,14 @@ namespace fefu_laboratory_two {
 		/// It is a non-binding request to reduce the memory usage without changing
 		/// the size of the sequence. All iterators and references are invalidated.
 		/// Past-the-end iterator is also invalidated.
-		void shrink_to_fit();
+		void shrink_to_fit() {
+			Chunk* tmp = last_chunk();
+			while (tmp->chunk_size == 0)
+			{
+				tmp = tmp->prev;
+				tmp->next = nullptr;
+			}
+		};
 
 		/// MODIFIERS
 
@@ -850,7 +857,7 @@ namespace fefu_laboratory_two {
 				list_size++;
 			}
 			else {
-				tmp->next = new Chunk(); //дать новому чанку prev
+				tmp->next = new Chunk();
 				ChunkList_iterator<T> it = ChunkList_iterator<T>(
 					this,
 					list_size - 1,
@@ -874,7 +881,18 @@ namespace fefu_laboratory_two {
 		/// @param value element value to insert
 		/// @return Iterator pointing to the first element inserted, or pos if count
 		/// == 0.
-		iterator insert(const_iterator pos, size_type count, const T& value) {};
+		iterator insert(const_iterator pos, size_type count, const T& value)
+		{
+			if (count == 0) return pos;
+
+			int index = pos.GetIndex();
+
+			for (int i = 0; i < count; i++) {
+				insert(pos, value);
+			}
+
+			return ChunkList_iterator<T>(this, index, at(index));
+		};
 
 		/// @brief Inserts elements from range [first, last) before pos.
 		/// @tparam InputIt Input Iterator
@@ -884,14 +902,35 @@ namespace fefu_laboratory_two {
 		/// @return Iterator pointing to the first element inserted, or pos if first
 		/// == last.
 		template <class InputIt>
-		iterator insert(const_iterator pos, InputIt first, InputIt last) {};
+		iterator insertIt(const_iterator pos, InputIt first, InputIt last) {
+			if (first == last) return pos;
+
+			int index = pos.GetIndex();
+			auto it = first;
+			for (; it != last; it++) {
+				insert(pos, *it);
+			}
+
+			return ChunkList_iterator<T>(this, index, &at(index));
+		};
 
 		/// @brief Inserts elements from initializer list before pos.
 		/// @param pos iterator before which the content will be inserted.
 		/// @param ilist initializer list to insert the values from
 		/// @return Iterator pointing to the first element inserted, or pos if ilist
 		/// is empty.
-		iterator insert(const_iterator pos, std::initializer_list<T> ilist) {};
+		iterator insert(const_iterator pos, std::initializer_list<T> ilist)
+		{
+			if (ilist.size() == 0) return pos;
+			int index = pos.GetIndex();
+			auto it = ilist.begin();
+
+			for (; it != ilist.end(); ++it) {
+				insert(pos, *it);
+			}
+
+			return ChunkList_iterator<T>(this, index, &at(index));
+		};
 
 		/// @brief Inserts a new element into the container directly before pos.
 		/// @param pos iterator before which the new element will be constructed
@@ -1138,7 +1177,9 @@ namespace fefu_laboratory_two {
 	/// @brief  Swaps the contents of lhs and rhs.
 	/// @param lhs,rhs containers whose contents to swap
 	template <class T, int N, class Alloc>
-	void swap(ChunkList<T, N, Alloc>& lhs, ChunkList<T, N, Alloc>& rhs);
+	void swap(ChunkList<T, N, Alloc>& lhs, ChunkList<T, N, Alloc>& rhs) {
+		std::swap(lhs, rhs);
+	};
 
 	/// @brief Erases all elements that compare equal to value from the container.
 	/// @param c container from which to erase
