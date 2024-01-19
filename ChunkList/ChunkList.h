@@ -933,7 +933,6 @@ namespace fefu_laboratory_two {
 		/// @param first,last range of elements to remove
 		/// @return Iterator following the last removed element.
 		iterator erase(const_iterator first, const_iterator last) {
-			//TODO: chunk_size--;!!
 			int i = 1;
 			int temp = 0;
 			int index = last.GetIndex();
@@ -947,7 +946,7 @@ namespace fefu_laboratory_two {
 
 			Chunk* tmp = last_chunk();
 			list_size -= temp;
-			while (temp > 0) { //TODO: CHECK!!!
+			while (temp > 0) {
 				if (tmp->chunk_size > 0) {
 					tmp->chunk_size--;
 					temp--;
@@ -1039,7 +1038,15 @@ namespace fefu_laboratory_two {
 		/// first count elements. If the current size is less than count, additional
 		/// default-inserted elements are appended
 		/// @param count new size of the container
-		void resize(size_type count);
+		void resize(size_type count) {
+			if (count == list_size) return;
+			if (count < list_size)
+				while (list_size != count)
+					pop_back();
+			else
+				while (list_size != count)
+					push_back(T());
+		};
 
 		/// @brief Resizes the container to contain count elements.
 		/// If the current size is greater than count, the container is reduced to its
@@ -1047,7 +1054,15 @@ namespace fefu_laboratory_two {
 		/// copies of value are appended.
 		/// @param count new size of the container
 		/// @param value the value to initialize the new elements with
-		void resize(size_type count, const value_type& value);
+		void resize(size_type count, const value_type& value) {
+			if (count == list_size) return;
+			if (count < list_size)
+				while (list_size != count)
+					pop_back();
+			else
+				while (list_size != count)
+					push_back(value);
+		};
 
 		/// @brief Exchanges the contents of the container with those of other.
 		/// Does not invoke any move, copy, or swap operations on individual elements.

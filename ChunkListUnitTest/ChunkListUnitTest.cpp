@@ -79,9 +79,9 @@ namespace ChunkListUnitTest
 		}
 
 		TEST_METHOD(AssignInitListShould)
-		{			
+		{
 			ChunkList<int, 8> list1;
-			list1.assign({1,2,3,4,5});
+			list1.assign({ 1,2,3,4,5 });
 
 			ChunkList<int, 8> list2;
 			for (int i = 1; i <= 5; i++) {
@@ -213,6 +213,26 @@ namespace ChunkListUnitTest
 			list.insert(it, 100);
 
 			Assert::IsTrue(list == list_should);
+		}
+
+		TEST_METHOD(ResizeShould)
+		{
+			ChunkList<int, 8> list1;
+			list1 = { 1,2,3,4,5 };
+			list1.resize(8, 100);
+			ChunkList<int, 8> list2;
+
+			for (int i = 1; i <= 5; i++)
+				list2.push_back(i);
+			for (int i = 0; i < 3; i++)
+				list2.push_back(100);
+
+			Assert::IsTrue(list1 == list2);
+
+			list1.resize(4);
+			list2.resize(4);
+
+			Assert::IsTrue(list1 == list2);
 		}
 
 		TEST_METHOD(EraseShould) {
