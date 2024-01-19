@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <iterator>
 #include <memory>
-#include <list>
+#include <vector>
 #include <algorithm>
 #include <exception>
 
@@ -932,12 +932,16 @@ namespace fefu_laboratory_two {
 			return ChunkList_iterator<T>(this, index, &at(index));
 		};
 
+
 		/// @brief Inserts a new element into the container directly before pos.
 		/// @param pos iterator before which the new element will be constructed
 		/// @param ...args arguments to forward to the constructor of the element
 		/// @return terator pointing to the emplaced element.
 		template <class... Args>
-		iterator emplace(const_iterator pos, Args&&... args);
+		iterator emplace(const_iterator pos, Args&&... args) {
+			auto data = { std::forward<Args>(args)... };
+			return insert(pos, data);
+		};
 
 		/// @brief Removes the element at pos.
 		/// @param pos iterator to the element to remove
@@ -1040,7 +1044,13 @@ namespace fefu_laboratory_two {
 		/// @param ...args arguments to forward to the constructor of the element
 		/// @return A reference to the inserted element.
 		template <class... Args>
-		reference emplace_back(Args&&... args);
+		reference emplace_back(Args&&... args) {
+			auto data = { std::forward<Args>(args)... };
+			auto it = data.begin();
+			for (; it != data.end(); it++)
+				push_back(*it);
+			return back();
+		};
 
 		/// @brief Removes the last element of the container.
 		void pop_back() { //TODO: del chunk if empty?
@@ -1065,7 +1075,13 @@ namespace fefu_laboratory_two {
 		/// @param ...args arguments to forward to the constructor of the element
 		/// @return A reference to the inserted element.
 		template <class... Args>
-		reference emplace_front(Args&&... args);
+		reference emplace_front(Args&&... args) {
+			auto data = { std::forward<Args>(args)... };
+			auto it = data.begin();
+			for (; it != data.end(); it++)
+				push_front(*it);
+			return back();
+		};
 
 		/// @brief Removes the first element of the container.
 		void pop_front() {

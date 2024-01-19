@@ -189,6 +189,23 @@ namespace ChunkListUnitTest
 	};
 
 	TEST_CLASS(ModifierTests) {
+		TEST_METHOD(EmplaceShould)
+		{
+			ChunkList<int, 8> list = { 1,2,3,4,5 };
+			ChunkList<int, 8> list1 = { 1,2,3,23,213,123,4,5 };
+			ChunkList<int, 8> list2 = { 1,2,3,23,213,123,4,5,42,231 };
+			ChunkList<int, 8> list3 = { 51,654,1,2,3,23,213,123,4,5,42,231 };
+
+			auto it = list.emplace(list.cbegin() + 3, 123, 213, 23);
+			Assert::IsTrue(list == list1);
+
+			auto it1 = list.emplace_back(42, 231);
+			Assert::IsTrue(list == list2);
+
+			auto it2 = list.emplace_front(654, 51);
+			Assert::IsTrue(list == list3);
+		}
+
 		TEST_METHOD(InsertShould1) {
 			ChunkList<int, 8> list;
 			ChunkList<int, 8> list_should;
