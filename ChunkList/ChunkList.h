@@ -307,7 +307,7 @@ namespace fefu_laboratory_two {
 			Chunk* next = nullptr;
 			int chunk_size = 0;	//кол-во занятых мест в чанке
 			Allocator allocator;
-			Chunk() {
+			Chunk(const Allocator& alloc = Allocator()) : allocator(alloc) {
 				list = allocator.allocate(N);
 			}
 
@@ -396,7 +396,16 @@ namespace fefu_laboratory_two {
 		/// @param first, last 	the range to copy the elements from
 		/// @param alloc allocator to use for all memory allocations of this container
 		template <class InputIt>
-		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator()) {};
+		ChunkList(InputIt first, InputIt last, const Allocator& alloc = Allocator()) {
+			if (first == last) return;
+			first_chunk = new Chunk(alloc);
+
+			auto it = first;
+
+			for (; it != last; ++it) {
+				push_back(*it);
+			}
+		};
 
 		/// @brief Copy constructor. Constructs the container with the copy of the
 		/// contents of other.
@@ -474,7 +483,16 @@ namespace fefu_laboratory_two {
 		/// @param init initializer list to initialize the elements of the container
 		/// with
 		/// @param alloc allocator to use for all memory allocations of this container
-		ChunkList(std::initializer_list<T> init, const Allocator& alloc = Allocator()) {};
+		ChunkList(std::initializer_list<T> init, const Allocator& alloc = Allocator()) {
+			if (init.size() == 0) return;
+			first_chunk = new Chunk(alloc);
+
+			auto it = init.begin();
+
+			for (; it != init.end(); ++it) {
+				push_back(*it);
+			}
+		};
 
 		/// @brief Destructs the ChunkList.
 		~ChunkList() override {

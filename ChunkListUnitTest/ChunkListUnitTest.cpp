@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "CppUnitTest.h"
+#include <vector>
 #include "../ChunkList/ChunkList.h"
 
 using namespace fefu_laboratory_two;
@@ -24,6 +25,29 @@ namespace ChunkListUnitTest
 				list1.push_back(i);
 			}
 			auto list2 = list1;
+			Assert::IsTrue(list1 == list2);
+		}
+
+		TEST_METHOD(InitializerListConstructorShould)
+		{
+			ChunkList<int, 8> list1 = { 1,2,3,4,5 };
+			ChunkList<int, 8> list2;
+			for (int i = 1; i <= 5; i++) {
+				list2.push_back(i);
+			}
+			Assert::IsTrue(list1 == list2);
+		}
+
+		TEST_METHOD(InputItConstructorShould)
+		{
+			std::vector<int> v = { 1,2,3,4,5 };
+			auto first = v.begin();
+			auto last = v.end();
+			ChunkList<int, 8> list1(first, last);
+			ChunkList<int, 8> list2;
+			for (int i = 1; i <= 5; i++) {
+				list2.push_back(i);
+			}
 			Assert::IsTrue(list1 == list2);
 		}
 
