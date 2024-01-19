@@ -532,7 +532,14 @@ namespace fefu_laboratory_two {
 		/// ilist.
 		/// @param ilist
 		/// @return this
-		ChunkList& operator=(std::initializer_list<T> ilist);
+		ChunkList& operator=(std::initializer_list<T> ilist) {
+			auto it = ilist.begin();
+
+			for (; it != ilist.end(); ++it) {
+				push_back(*it);
+			}
+			return *this;
+		};
 
 		/// @brief Replaces the contents with count copies of value
 		/// @param count
@@ -552,12 +559,30 @@ namespace fefu_laboratory_two {
 		/// @param first
 		/// @param last
 		template <class InputIt>
-		void assignIt(InputIt first, InputIt last) {};
+		void assignIt(InputIt first, InputIt last) {
+			if (first == last) return;
+			clear();
+
+			auto it = first;
+
+			for (; it != last; ++it) {
+				push_back(*it);
+			}
+		};
 
 		/// @brief Replaces the contents with the elements from the initializer list
 		/// ilis
 		/// @param ilist
-		void assign(std::initializer_list<T> ilist) {};
+		void assign(std::initializer_list<T> ilist) {
+			if (ilist.size() == 0) return;
+			clear();
+
+			auto it = ilist.begin();
+
+			for (; it != ilist.end(); ++it) {
+				push_back(*it);
+			}
+		};
 
 		/// @brief Returns the allocator associated with the container.
 		/// @return The associated allocator.

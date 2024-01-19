@@ -62,6 +62,46 @@ namespace ChunkListUnitTest
 
 			Assert::IsTrue(list1 == list2);
 		}
+
+		TEST_METHOD(AssignItShould)
+		{
+			std::vector<int> v = { 1,2,3,4,5 };
+			auto first = v.begin();
+			auto last = v.end();
+			ChunkList<int, 8> list1;
+			list1.assignIt(first, last);
+			ChunkList<int, 8> list2;
+			for (int i = 1; i <= 5; i++) {
+				list2.push_back(i);
+			}
+
+			Assert::IsTrue(list1 == list2);
+		}
+
+		TEST_METHOD(AssignInitListShould)
+		{			
+			ChunkList<int, 8> list1;
+			list1.assign({1,2,3,4,5});
+
+			ChunkList<int, 8> list2;
+			for (int i = 1; i <= 5; i++) {
+				list2.push_back(i);
+			}
+
+			Assert::IsTrue(list1 == list2);
+		}
+
+		TEST_METHOD(AssignmentOperatorShould)
+		{
+			ChunkList<int, 8> list1;
+			list1 = { 1,2,3,4,5 };
+			ChunkList<int, 8> list2;
+			for (int i = 1; i <= 5; i++) {
+				list2.push_back(i);
+			}
+
+			Assert::IsTrue(list1 == list2);
+		}
 	};
 
 	TEST_CLASS(ElementAccessTests)
