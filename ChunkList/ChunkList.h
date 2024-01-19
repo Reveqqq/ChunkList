@@ -1166,24 +1166,55 @@ namespace fefu_laboratory_two {
 		/// @brief Compares the contents of lhs and rhs lexicographically.
 		/// @param lhs,rhs ChunkLists whose contents to compare
 		template <class U, int N, class Alloc>
-		friend bool operator>(const ChunkList<U, N, Alloc>& lhs, const ChunkList<U, N, Alloc>& rhs);
+		friend bool operator>(const ChunkList<U, N, Alloc>& lhs, const ChunkList<U, N, Alloc>& rhs) {
+			if (lhs.list_size < rhs.list_size)
+				return false;
+			if (lhs.list_size > rhs.list_size)
+				return true;
+			if (lhs.list_size != rhs.list_size)
+				return false;
+
+			for (int i = 0; i < lhs.list_size; i++)
+				if (rhs.at(i) < lhs.at(i))
+					return true;
+
+			return false;
+		};
 
 		/// @brief Compares the contents of lhs and rhs lexicographically.
 		/// @param lhs,rhs ChunkLists whose contents to compare
 		template <class U, int N, class Alloc>
-		friend bool operator<(const ChunkList<U, N, Alloc>& lhs, const ChunkList<U, N, Alloc>& rhs);
+		friend bool operator<(const ChunkList<U, N, Alloc>& lhs, const ChunkList<U, N, Alloc>& rhs) {
+			if (lhs.list_size < rhs.list_size)
+				return true;
+			if (lhs.list_size > rhs.list_size)
+				return false;
+
+			if (lhs.list_size != rhs.list_size)
+				return false;
+
+			for (int i = 0; i < lhs.list_size; i++)
+				if (rhs.at(i) - lhs.at(i) > 0)
+					return true;
+
+			return false;
+		};
 
 		/// @brief Compares the contents of lhs and rhs lexicographically.
 		/// @param lhs,rhs ChunkLists whose contents to compare
 		template <class U, int N, class Alloc>
 		friend bool operator>=(const ChunkList<U, N, Alloc>& lhs,
-			const ChunkList<U, N, Alloc>& rhs);
+			const ChunkList<U, N, Alloc>& rhs) {
+			return !operator<(lhs, rhs);
+		};
 
 		/// @brief Compares the contents of lhs and rhs lexicographically.
 		/// @param lhs,rhs ChunkLists whose contents to compare
 		template <class U, int N, class Alloc>
 		friend bool operator<=(const ChunkList<U, N, Alloc>& lhs,
-			const ChunkList<U, N, Alloc>& rhs);
+			const ChunkList<U, N, Alloc>& rhs) {
+			return !operator>(lhs, rhs);
+		};
 
 		// operator <=> will be handy
 	};

@@ -316,4 +316,27 @@ namespace ChunkListUnitTest
 			Assert::IsTrue(list[0] == 0);
 		}
 	};
+
+	TEST_CLASS(ComparisionsTests) {
+		TEST_METHOD(EqualsShould) {
+			ChunkList<int, 8> list1 = { 1,2,3,4,5 };
+			ChunkList<int, 8> list2 = { 1,2,3,4,5 };
+			Assert::IsTrue(list1 == list2);
+		}
+
+		TEST_METHOD(ComparisionsShould) {
+			ChunkList<int, 8> list1 = { 1,2,3,4,5 };
+			ChunkList<int, 8> list2 = { 1,2,3,4,5 };
+			ChunkList<int, 8> list3 = { 1,2,10,4,5 };
+			ChunkList<int, 8> list4 = { 1,2,3,4,5,1 };
+
+
+			Assert::IsTrue(list1 <= list2);
+			Assert::IsTrue(list1 >= list2);
+			Assert::IsTrue(list3 > list2);
+			Assert::IsTrue(list4 > list2);
+			Assert::IsTrue(list1 < list4);
+			Assert::IsFalse(list2 > list3);
+		}
+	};
 }
